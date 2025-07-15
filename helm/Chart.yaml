@@ -1,0 +1,29 @@
+apiVersion: v2
+name: kubeintel
+description: KubeIntel - AI-powered Kubernetes intelligence and predictive analytics platform with Claude 3.5 support
+type: application
+version: 1.3.0
+appVersion: "v1.3.0-claude35"
+home: https://github.com/your-org/kubeintel
+sources:
+  - https://github.com/your-org/kubeintel
+maintainers:
+  - name: AWS Strands Team
+    email: strands-team@amazon.com
+keywords:
+  - kubernetes
+  - monitoring
+  - ai
+  - aws
+  - bedrock
+  - claude-3.5
+  - claude-35-sonnet
+  - claude-35-haiku
+  - strands
+annotations:
+  category: Monitoring
+  claude.version: "3.5"
+  strands.version: "1.0.1"
+  kubeintel.io/supports-claude35: "true"
+  kubeintel.io/backward-compatible: "true"
+dependencies: []

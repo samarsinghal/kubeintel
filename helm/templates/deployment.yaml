@@ -1,0 +1,191 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kubeintel.fullname" . }}
+  labels:
+    {{- include "kubeintel.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "kubeintel.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        # Model configuration annotations for monitoring and debugging
+        {{- include "kubeintel.modelAnnotations" . | nindent 8 }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- $configWarnings := include "kubeintel.validateConfig" . }}
+        {{- if $configWarnings }}
+        kubeintel.io/config-warnings: {{ $configWarnings | quote }}
+        {{- end }}
+      labels:
+        {{- include "kubeintel.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "kubeintel.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - src.main
+          ports:
+            - name: http
+              containerPort: {{ .Values.config.port }}
+              protocol: TCP
+          env:
+            # Basic application configuration
+            - name: AGENT_HOST
+              value: {{ .Values.config.host | default "0.0.0.0" | quote }}
+            - name: AGENT_PORT
+              value: {{ .Values.config.port | default 8000 | quote }}
+            - name: AGENT_LOG_LEVEL
+              value: {{ .Values.config.logLevel | default "info" | quote }}
+            - name: AGENT_ANALYSIS_TIMEOUT
+              value: {{ .Values.config.analysisTimeout | quote }}
+            
+            # Timeout configurations
+            - name: AGENT_PREDICTIONS_TIMEOUT
+              value: {{ .Values.config.predictionsTimeout | default 30 | quote }}
+            - name: AGENT_FILE_OPERATIONS_TIMEOUT
+              value: {{ .Values.config.fileOperationsTimeout | default 10 | quote }}
+            - name: AGENT_BATCH_COMMAND_TIMEOUT
+              value: {{ .Values.config.batchCommandTimeout | default 120 | quote }}
+            - name: AGENT_SINGLE_COMMAND_TIMEOUT
+              value: {{ .Values.config.singleCommandTimeout | default 30 | quote }}
+            - name: AGENT_STARTUP_TIMEOUT
+              value: {{ .Values.config.startupTimeout | default 30 | quote }}
+            - name: AGENT_SHUTDOWN_TIMEOUT
+              value: {{ .Values.config.shutdownTimeout | default 45 | quote }}
+            
+            # Tool configurations
+            - name: AGENT_MAX_BATCH_COMMANDS
+              value: {{ .Values.config.maxBatchCommands | default 10 | quote }}
+            - name: AGENT_MAX_RETRIES
+              value: {{ .Values.config.maxRetries | default 3 | quote }}
+            - name: AGENT_RETRY_DELAY
+              value: {{ .Values.config.retryDelay | default 1.0 | quote }}
+            - name: AGENT_LOG_TRUNCATION_LENGTH
+              value: {{ .Values.config.logTruncationLength | default 50 | quote }}
+            
+            # Telemetry configurations
+            - name: AGENT_TELEMETRY_AGENT_FLOWS_LIMIT
+              value: {{ .Values.config.telemetry.agentFlowsLimit | default 50 | quote }}
+            - name: AGENT_TELEMETRY_MONITOR_FLOWS_LIMIT
+              value: {{ .Values.config.telemetry.monitorFlowsLimit | default 100 | quote }}
+            - name: AGENT_TELEMETRY_TRACES_LIMIT
+              value: {{ .Values.config.telemetry.tracesLimit | default 200 | quote }}
+            - name: AGENT_TELEMETRY_DEFAULT_QUERY_LIMIT
+              value: {{ .Values.config.telemetry.defaultQueryLimit | default 20 | quote }}
+            
+            # Monitor configurations
+            - name: AGENT_SESSION_DIRECTORY
+              value: {{ .Values.config.monitor.sessionDirectory | default "/tmp/kubeintel_sessions" | quote }}
+            
+            # AWS Strands configuration
+            - name: AGENT_STRANDS_REGION
+              value: {{ .Values.config.strands.region | quote }}
+            
+            # Model configuration
+            {{- if .Values.config.strands.legacyMode }}
+            # Legacy mode: Use Claude 3 Haiku
+            - name: AGENT_STRANDS_MODEL
+              value: {{ .Values.config.strands.legacyModel | default "anthropic.claude-3-haiku-20240307-v1:0" | quote }}
+            {{- else }}
+            # Claude 3.5 mode: Use Claude 3.5 Haiku
+            - name: AGENT_STRANDS_MODEL
+              value: {{ .Values.config.strands.model | quote }}
+            {{- end }}
+            
+            # Efficiency guidance configuration
+            - name: AGENT_EFFICIENCY_GUIDANCE
+              value: {{ .Values.config.efficiencyGuidance | default true | quote }}
+            
+            # AWS Region
+            - name: AWS_DEFAULT_REGION
+              value: {{ .Values.aws.region | quote }}
+            {{- if .Values.aws.roleArn }}
+            # AWS IAM Role for Service Account (IRSA)
+            - name: AWS_ROLE_ARN
+              value: {{ .Values.aws.roleArn | quote }}
+            - name: AWS_WEB_IDENTITY_TOKEN_FILE
+              value: "/var/run/secrets/eks.amazonaws.com/serviceaccount/token"
+            {{- end }}
+            # AWS Credentials
+            {{- if .Values.aws.accessKeyId }}
+            - name: AWS_ACCESS_KEY_ID
+              value: {{ .Values.aws.accessKeyId | quote }}
+            {{- end }}
+            {{- if .Values.aws.secretAccessKey }}
+            - name: AWS_SECRET_ACCESS_KEY
+              value: {{ .Values.aws.secretAccessKey | quote }}
+            {{- end }}
+            {{- if .Values.aws.sessionToken }}
+            - name: AWS_SESSION_TOKEN
+              value: {{ .Values.aws.sessionToken | quote }}
+            {{- end }}
+            # Additional environment variables
+            {{- range .Values.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          {{- with .Values.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

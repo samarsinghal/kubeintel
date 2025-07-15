@@ -1,0 +1,145 @@
+{{- if .Values.migration.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubeintel.fullname" . }}-migration
+  labels:
+    {{- include "kubeintel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-10"
+data:
+  migration-config.yaml: |
+    # KubeIntel Claude 3.5 Migration Configuration
+    migration:
+      enabled: {{ .Values.migration.enabled }}
+      strategy: {{ .Values.migration.strategy.type }}
+      createBackup: {{ .Values.migration.createBackup }}
+      
+    # Model mapping for migration
+    modelMapping:
+      # Legacy Claude 3 models to Claude 3.5 equivalents
+      "anthropic.claude-3-haiku-20240307-v1:0": "anthropic.claude-3-5-sonnet-20241022-v2:0"
+      "anthropic.claude-3-sonnet-20240229-v1:0": "anthropic.claude-3-5-sonnet-20241022-v2:0"
+      "claude-3-haiku": "anthropic.claude-3-5-sonnet-20241022-v2:0"
+      "claude-3-sonnet": "anthropic.claude-3-5-sonnet-20241022-v2:0"
+      
+    # Fallback model configuration
+    fallbackModel: "anthropic.claude-3-5-haiku-20241022-v1:0"
+    
+    # Configuration updates for Claude 3.5
+    configUpdates:
+      sessionTtl:
+        from: 3600
+        to: 7200
+        reason: "Better context retention for Claude 3.5"
+      
+      disableStreaming:
+        from: false
+        to: true
+        reason: "Required for Claude 3.5 stability"
+        
+      analysisTimeout:
+        minimum: 180
+        recommended: 180
+        reason: "Allow sufficient time for Claude 3.5 analysis"
+        
+    # Resource recommendations for Claude 3.5
+    resourceRecommendations:
+      memory:
+        minimum: "1Gi"
+        recommended: "2Gi"
+        reason: "Claude 3.5 requires more memory for optimal performance"
+        
+      cpu:
+        minimum: "500m"
+        recommended: "1000m"
+        reason: "Enhanced reasoning requires more CPU resources"
+        
+    # Validation rules
+    validation:
+      required:
+        - "Primary model must be Claude 3.5 Sonnet"
+        - "Fallback model must be configured"
+        - "Session TTL must be at least 3600 seconds"
+        - "Streaming must be disabled"
+        
+      recommended:
+        - "Session TTL should be 7200 seconds for optimal context retention"
+        - "Analysis timeout should be at least 180 seconds"
+        - "Memory limit should be at least 2Gi"
+        - "Use IAM roles instead of hardcoded credentials"
+        
+  migration-script.sh: |
+    #!/bin/bash
+    # KubeIntel Claude 3.5 Migration Helper Script
+    
+    set -e
+    
+    echo "KubeIntel Claude 3.5 Migration Helper"
+    echo "===================================="
+    
+    # Check current configuration
+    echo "Checking current configuration..."
+    
+    # Get current model from deployment
+    CURRENT_MODEL=$(kubectl get deployment {{ include "kubeintel.fullname" . }} -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="AGENT_STRANDS_MODEL")].value}' 2>/dev/null || echo "not-found")
+    
+    echo "Current model: $CURRENT_MODEL"
+    
+    # Check if migration is needed
+    if [[ "$CURRENT_MODEL" == *"claude-3-5"* ]]; then
+        echo "✓ Already using Claude 3.5 - no migration needed"
+        exit 0
+    fi
+    
+    echo "Migration to Claude 3.5 is needed"
+    
+    # Create backup if requested
+    {{- if .Values.migration.createBackup }}
+    echo "Creating backup of current configuration..."
+    kubectl get deployment {{ include "kubeintel.fullname" . }} -o yaml > /tmp/kubeintel-backup-$(date +%Y%m%d-%H%M%S).yaml
+    echo "Backup created: /tmp/kubeintel-backup-$(date +%Y%m%d-%H%M%S).yaml"
+    {{- end }}
+    
+    # Apply migration strategy
+    {{- if eq .Values.migration.strategy.type "gradual" }}
+    echo "Applying gradual migration strategy..."
+    echo "Claude 3.5 traffic percentage: {{ .Values.migration.strategy.claude35Percentage }}%"
+    {{- else }}
+    echo "Applying immediate migration strategy..."
+    {{- end }}
+    
+    echo "Migration helper completed. Proceed with Helm upgrade."
+    
+  rollback-script.sh: |
+    #!/bin/bash
+    # KubeIntel Claude 3.5 Rollback Helper Script
+    
+    set -e
+    
+    echo "KubeIntel Claude 3.5 Rollback Helper"
+    echo "==================================="
+    
+    # Find backup files
+    BACKUP_FILES=$(ls /tmp/kubeintel-backup-*.yaml 2>/dev/null || echo "")
+    
+    if [[ -z "$BACKUP_FILES" ]]; then
+        echo "No backup files found. Using Helm rollback..."
+        helm rollback {{ include "kubeintel.fullname" . }} || echo "Helm rollback failed"
+    else
+        echo "Found backup files:"
+        echo "$BACKUP_FILES"
+        
+        # Use the most recent backup
+        LATEST_BACKUP=$(ls -t /tmp/kubeintel-backup-*.yaml | head -n1)
+        echo "Using latest backup: $LATEST_BACKUP"
+        
+        # Apply the backup
+        kubectl apply -f "$LATEST_BACKUP"
+        echo "Rollback completed using backup configuration"
+    fi
+    
+    echo "Rollback helper completed"
+{{- end }}

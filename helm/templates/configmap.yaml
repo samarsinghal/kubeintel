@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubeintel.fullname" . }}-config
+  labels:
+    {{- include "kubeintel.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    # AWS Strands Monitoring Agent Configuration
+    log_level: {{ .Values.config.logLevel }}
+    log_format: {{ .Values.config.logFormat }}
+    
+    # Kubernetes configuration
+    kubernetes_config: {{ .Values.config.kubernetesConfig }}
+    max_events: {{ .Values.config.maxEvents }}
+    max_log_lines: {{ .Values.config.maxLogLines }}
+    analysis_timeout: {{ .Values.config.analysisTimeout }}
+    
+    # HTTP server
+    host: {{ .Values.config.host }}
+    port: {{ .Values.config.port }}
+    
+    # AWS Strands Configuration
+    strands_region: {{ .Values.config.strands.region }}
+    
+    # Model Configuration with backward compatibility
+    {{- if .Values.config.strands.legacyMode }}
+    # Legacy mode: Use Claude 3 Haiku for backward compatibility
+    strands_model: {{ .Values.config.strands.legacyModel | default "anthropic.claude-3-haiku-20240307-v1:0" }}
+    strands_fallback_model: {{ .Values.config.strands.legacyModel | default "anthropic.claude-3-haiku-20240307-v1:0" }}
+    {{- else }}
+    # Claude 3.5 mode: Use enhanced models
+    strands_model: {{ .Values.config.strands.model }}
+    strands_fallback_model: {{ .Values.config.strands.fallbackModel | default "anthropic.claude-3-5-haiku-20241022-v1:0" }}
+    {{- end }}
+    
+    # Session and connection settings
+    strands_session_ttl: {{ .Values.config.strands.sessionTtl }}
+    {{- if .Values.config.strands.endpoint }}
+    strands_endpoint: {{ .Values.config.strands.endpoint }}
+    {{- end }}
+    strands_connect_timeout: {{ .Values.config.strands.connectTimeout | default 30 }}
+    strands_read_timeout: {{ .Values.config.strands.readTimeout | default 60 }}
+    
+    # Model configuration
+    strands_model: {{ .Values.config.strands.model | quote }}
+    strands_fallback_model: {{ .Values.config.strands.fallbackModel | quote }}
+    strands_region: {{ .Values.config.strands.region | quote }}
+    strands_session_ttl: {{ .Values.config.strands.sessionTtl | quote }}
+    
+    # Direct Kubernetes API access
+    direct_kubernetes_access: {{ .Values.config.directKubernetesAccess | default true }}
+    
+    # Auto-monitoring configuration
+    auto_monitoring:
+      enabled: {{ .Values.config.autoMonitoring.enabled }}
+      event_batch_size: {{ .Values.config.autoMonitoring.eventBatchSize }}
+      event_batch_timeout: {{ .Values.config.autoMonitoring.eventBatchTimeout }}
+      monitored_namespaces: {{ .Values.config.autoMonitoring.monitoredNamespaces | quote }}
+      critical_event_types: {{ .Values.config.autoMonitoring.criticalEventTypes | quote }}
+      analysis_retention_days: {{ .Values.config.autoMonitoring.analysisRetentionDays }}
+      max_concurrent_analyses: {{ .Values.config.autoMonitoring.maxConcurrentAnalyses }}
+      deduplication_window: {{ .Values.config.autoMonitoring.deduplicationWindow }}

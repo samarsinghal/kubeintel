@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="600" height="120" viewBox="0 0 600 120" xmlns="http://www.w3.org/2000/svg">
+  <g id="kubeintel-logo-horizontal">
+    <!-- Icon Part -->
+    <g id="logo-icon" transform="translate(10, 10) scale(0.2)">
+      <!-- Hexagon path -->
+      <path d="M256 0L480 128L480 384L256 512L32 384L32 128L256 0Z" fill="#0066cc"/>
+      <!-- Inner hexagon (transparent) -->
+      <path d="M256 100L400 185L400 355L256 440L112 355L112 185L256 100Z" fill="transparent"/>
+      <!-- 'i' shape -->
+      <circle cx="256" cy="140" r="25" fill="#FFFFFF"/>
+      <path d="M256 180L256 440" stroke="#FFFFFF" stroke-width="40" stroke-linecap="round"/>
+    </g>
+    
+    <!-- Text Part -->
+    <g id="logo-text" transform="translate(130, 65)">
+      <!-- KubeIntel Text -->
+      <text font-family="Arial, sans-serif" font-size="48" font-weight="700">
+        <tspan x="0" y="0" fill="#333333">Kube</tspan><tspan fill="#0066cc">Intel</tspan>
+      </text>
+      
+      <!-- Tagline -->
+      <text font-family="Arial, sans-serif" font-size="14" font-weight="400" x="5" y="25" fill="#666666">
+        AI-Powered Kubernetes Intelligence
+      </text>
+    </g>
+  </g>
+</svg>

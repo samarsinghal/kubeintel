@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KubeIntel - Cost Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 20px 30px;
+            text-align: left;
+        }
+
+        .header h1 {
+            margin: 0;
+            padding: 0;
+            font-weight: normal;
+            line-height: 1;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-top: 8px;
+            margin-left: 2px;
+        }
+
+        .nav-bar {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            text-decoration: none;
+            color: #495057;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            background: #e9ecef;
+            color: #212529;
+        }
+
+        .nav-link.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .nav-breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .cost-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .cost-card h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .metric {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .cost-high { color: #dc3545; }
+        .cost-medium { color: #fd7e14; }
+        .cost-low { color: #28a745; }
+
+        .cost-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .cost-table th,
+        .cost-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .cost-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .cost-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .recommendation {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid;
+        }
+
+        .recommendation.high {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .recommendation.medium {
+            border-left-color: #fd7e14;
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .recommendation.low {
+            border-left-color: #28a745;
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .recommendation-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .recommendation-description {
+            margin-bottom: 5px;
+        }
+
+        .recommendation-suggestion {
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-active { background: #28a745; }
+        .status-warning { background: #fd7e14; }
+        .status-error { background: #dc3545; }
+
+        .refresh-info {
+            text-align: center;
+            color: #6c757d;
+            font-size: 12px;
+            margin-top: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .nav-bar {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+            }
+
+            .nav-links {
+                flex-direction: column;
+                width: 100%;
+                gap: 10px;
+            }
+
+            .nav-link {
+                justify-content: center;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="display: flex; align-items: center;">
+                <img src="/static/images/kubeintel-icon.svg" alt="KubeIntel"
+                    style="height: 60px; width: 60px; margin-right: 15px;">
+                <div>
+                    <div style="font-size: 28px; font-weight: 500; color: white; letter-spacing: 0.5px;">KubeIntel</div>
+                    <div style="font-size: 14px; color: rgba(255,255,255,0.8); margin-top: 4px;">AI-powered Kubernetes
+                        intelligence</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-bar">
+            <div class="nav-links">
+                <a href="/" class="nav-link">
+                    <span>🏠</span>
+                    <span>Main Dashboard</span>
+                </a>
+                <a href="/flow-visualizer" class="nav-link">
+                    <span>🔄</span>
+                    <span>Flow Visualizer</span>
+                </a>
+                <a href="/cost-visualizer" class="nav-link active">
+                    <span>💰</span>
+                    <span>Cost Visualizer</span>
+                </a>
+            </div>
+            <div class="nav-breadcrumb">
+                <span>📍</span>
+                <span class="current-page">Cost Analysis & Optimization</span>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="loading" class="loading">
+                <div class="loading-spinner"></div>
+                Loading cost analysis data...
+            </div>
+
+            <div id="content" style="display: none;">
+                <!-- Current Costs Overview -->
+                <div class="cost-card">
+                    <h2>💰 Current Cost Overview</h2>
+                    <div class="metric-grid" id="current-costs">
+                        <!-- Metrics will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Usage Breakdown -->
+                <div class="cost-card">
+                    <h2>📊 Usage Breakdown</h2>
+                    <table class="cost-table" id="usage-breakdown">
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th>Requests</th>
+                                <th>Input Tokens</th>
+                                <th>Output Tokens</th>
+                                <th>Total Cost</th>
+                                <th>Avg Cost/Request</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Cost Projections -->
+                <div class="cost-card">
+                    <h2>📈 Cost Projections</h2>
+                    <table class="cost-table" id="projections">
+                        <thead>
+                            <tr>
+                                <th>Period</th>
+                                <th>Background Monitoring</th>
+                                <th>Agent Analysis</th>
+                                <th>Total Estimated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Session Information -->
+                <div class="cost-card">
+                    <h2>🗂️ Session Information</h2>
+                    <div id="session-info">
+                        <!-- Session details will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Optimization Recommendations -->
+                <div class="cost-card">
+                    <h2>💡 Optimization Recommendations</h2>
+                    <div id="recommendations">
+                        <!-- Recommendations will be populated here -->
+                    </div>
+                </div>
+
+                <div class="refresh-info">
+                    <span class="status-indicator status-active"></span>
+                    Auto-refreshing every 30 seconds • Last updated: <span id="last-updated">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let lastUpdateTime = null;
+
+        async function loadCostData() {
+            try {
+                const response = await fetch('/api/cost/analysis');
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                displayCostData(data);
+                lastUpdateTime = new Date();
+                document.getElementById('last-updated').textContent = lastUpdateTime.toLocaleTimeString();
+                
+            } catch (error) {
+                console.error('Error loading cost data:', error);
+                document.getElementById('loading').innerHTML = `
+                    <div style="color: #dc3545;">
+                        <strong>Error loading cost data:</strong> ${error.message}
+                        <br><br>
+                        <button onclick="loadCostData()" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function displayCostData(data) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+
+            // Current costs overview
+            const currentCosts = document.getElementById('current-costs');
+            const totals = data.cost_breakdown?.totals || {};
+            const modelInfo = data.model_info || {};
+            
+            currentCosts.innerHTML = `
+                <div class="metric">
+                    <div class="metric-value cost-${getCostLevel(totals.total_cost)}">
+                        $${(totals.total_cost || 0).toFixed(4)}
+                    </div>
+                    <div class="metric-label">Total Cost</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">${(totals.total_tokens || 0).toLocaleString()}</div>
+                    <div class="metric-label">Total Tokens</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value cost-${getCostLevel(totals.average_cost_per_request)}">
+                        $${(totals.average_cost_per_request || 0).toFixed(4)}
+                    </div>
+                    <div class="metric-label">Avg Cost/Request</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">${modelInfo.pricing?.context_window?.toLocaleString() || '200,000'}</div>
+                    <div class="metric-label">Context Window</div>
+                </div>
+            `;
+
+            // Usage breakdown
+            const usageTable = document.getElementById('usage-breakdown').getElementsByTagName('tbody')[0];
+            const agent = data.cost_breakdown?.agent_analysis || {};
+            const monitor = data.cost_breakdown?.background_monitoring || {};
+            
+            usageTable.innerHTML = `
+                <tr>
+                    <td><strong>Agent Analysis</strong></td>
+                    <td>${agent.flow_count || 0}</td>
+                    <td>${(agent.total_input_tokens || 0).toLocaleString()}</td>
+                    <td>${(agent.total_output_tokens || 0).toLocaleString()}</td>
+                    <td>$${(agent.total_cost || 0).toFixed(4)}</td>
+                    <td>$${(agent.average_cost_per_flow || 0).toFixed(4)}</td>
+                </tr>
+                <tr>
+                    <td><strong>Background Monitoring</strong></td>
+                    <td>${monitor.flow_count || 0}</td>
+                    <td>${(monitor.total_input_tokens || 0).toLocaleString()}</td>
+                    <td>${(monitor.total_output_tokens || 0).toLocaleString()}</td>
+                    <td>$${(monitor.total_cost || 0).toFixed(4)}</td>
+                    <td>$${(monitor.average_cost_per_flow || 0).toFixed(4)}</td>
+                </tr>
+            `;
+
+            // Projections
+            const projectionsTable = document.getElementById('projections').getElementsByTagName('tbody')[0];
+            const proj = data.projections || {};
+            
+            projectionsTable.innerHTML = `
+                <tr>
+                    <td><strong>Hourly</strong></td>
+                    <td>$${(proj.hourly?.background_monitoring || 0).toFixed(4)}</td>
+                    <td>$${(proj.hourly?.agent_analysis || 0).toFixed(4)}</td>
+                    <td><strong>$${(proj.hourly?.total_estimated || 0).toFixed(4)}</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Daily</strong></td>
+                    <td>$${(proj.daily?.background_monitoring || 0).toFixed(2)}</td>
+                    <td>$${(proj.daily?.agent_analysis || 0).toFixed(2)}</td>
+                    <td><strong>$${(proj.daily?.total_estimated || 0).toFixed(2)}</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Monthly</strong></td>
+                    <td>$${(proj.monthly?.background_monitoring || 0).toFixed(2)}</td>
+                    <td>$${(proj.monthly?.agent_analysis || 0).toFixed(2)}</td>
+                    <td><strong>$${(proj.monthly?.total_estimated || 0).toFixed(2)}</strong></td>
+                </tr>
+            `;
+
+            // Session information
+            const sessionInfo = document.getElementById('session-info');
+            const session = data.session_analysis || {};
+            
+            sessionInfo.innerHTML = `
+                <div class="metric-grid">
+                    <div class="metric">
+                        <div class="metric-value">${session.active_sessions || 1}</div>
+                        <div class="metric-label">Active Sessions</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">${(session.estimated_context_size || 0).toLocaleString()}</div>
+                        <div class="metric-label">Estimated Context Size</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">${session.message_count || 0}</div>
+                        <div class="metric-label">Messages in Session</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">${(session.session_age_hours || 0).toFixed(1)}h</div>
+                        <div class="metric-label">Session Age</div>
+                    </div>
+                </div>
+            `;
+
+            // Recommendations
+            const recommendations = document.getElementById('recommendations');
+            const recs = data.optimization_recommendations || [];
+            
+            if (recs.length === 0) {
+                recommendations.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 20px;">No specific recommendations at this time. Current usage appears optimal.</p>';
+            } else {
+                recommendations.innerHTML = recs.map(rec => `
+                    <div class="recommendation ${rec.impact}">
+                        <div class="recommendation-title">${rec.title}</div>
+                        <div class="recommendation-description">${rec.description}</div>
+                        <div class="recommendation-suggestion">💡 ${rec.suggestion}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function getCostLevel(cost) {
+            if (!cost) return 'low';
+            if (cost > 0.05) return 'high';
+            if (cost > 0.01) return 'medium';
+            return 'low';
+        }
+
+        // Load data on page load
+        loadCostData();
+
+        // Refresh every 30 seconds
+        setInterval(loadCostData, 30000);
+
+        // Update the "last updated" time every second
+        setInterval(() => {
+            if (lastUpdateTime) {
+                const now = new Date();
+                const secondsAgo = Math.floor((now - lastUpdateTime) / 1000);
+                if (secondsAgo < 60) {
+                    document.getElementById('last-updated').textContent = `${secondsAgo}s ago`;
+                } else {
+                    document.getElementById('last-updated').textContent = lastUpdateTime.toLocaleTimeString();
+                }
+            }
+        }, 1000);
+    </script>
+</body>
+
+</html>

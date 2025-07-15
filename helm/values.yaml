@@ -1,0 +1,203 @@
+# Default values for kubeintel
+replicaCount: 1
+
+image:
+  repository: "YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/kubeintel"
+  pullPolicy: Always
+  tag: "fixed-1755469226"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: 
+    eks.amazonaws.com/role-arn: "arn:aws:iam::YOUR_AWS_ACCOUNT_ID:role/KubeIntelAgentRole"
+  name: "kubeintel-agent"
+
+podAnnotations: {}
+
+# RBAC configuration
+rbac:
+  create: true
+
+# Network Policy configuration
+networkPolicy:
+  enabled: false
+
+# Probes configuration - Optimized for AI workload
+probes:
+  liveness:
+    enabled: true
+    path: /health
+    port: 8000
+    initialDelaySeconds: 60    # Increased from 30s - allow more startup time
+    periodSeconds: 30          # Increased from 10s - less frequent checks
+    timeoutSeconds: 30         # Increased from 5s - allow for AI processing delays
+    failureThreshold: 5        # Increased from 3 - more tolerance for temporary delays
+  readiness:
+    enabled: true
+    path: /health
+    port: 8000
+    initialDelaySeconds: 15    # Keep relatively quick for faster service availability
+    periodSeconds: 15          # Increased from 5s - less frequent checks
+    timeoutSeconds: 30         # Increased from 5s - allow for AI processing delays
+    failureThreshold: 7        # Increased from 3 - more tolerance for temporary delays
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8000
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 1500m      # Increased CPU but within node capacity
+    memory: 4Gi     # Doubled memory for AI models and concurrent sessions
+  requests:
+    cpu: 400m       # Increased baseline CPU for AI workload
+    memory: 1Gi     # Increased baseline memory for better performance
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Application configuration
+config:
+  # Auto monitoring configuration
+  autoMonitoring:
+    enabled: true
+    eventBatchSize: 10
+    eventBatchTimeout: 30
+    monitoredNamespaces: "default,kube-system"
+    criticalEventTypes: "Warning,Error"
+    analysisRetentionDays: 7
+    maxConcurrentAnalyses: 3
+    deduplicationWindow: 300
+  logLevel: INFO
+  analysisTimeout: 300
+  host: 0.0.0.0
+  port: 8000
+  logLevel: info
+  directKubernetesAccess: true
+  
+  # Efficiency guidance configuration
+  efficiencyGuidance: true
+  
+  # Timeout configurations
+  predictionsTimeout: 30
+  fileOperationsTimeout: 10
+  batchCommandTimeout: 120
+  singleCommandTimeout: 30
+  startupTimeout: 30
+  shutdownTimeout: 45
+  
+  # Tool configurations
+  maxBatchCommands: 10
+  maxRetries: 3
+  retryDelay: 1.0
+  logTruncationLength: 50
+  
+  # Telemetry configurations
+  telemetry:
+    agentFlowsLimit: 50
+    monitorFlowsLimit: 100
+    tracesLimit: 200
+    defaultQueryLimit: 20
+  
+  # Monitor configurations
+  monitor:
+    sessionDirectory: "/tmp/kubeintel_sessions"
+  
+  # AWS Strands configuration
+  strands:
+    region: us-east-1
+    
+    # Single Model Configuration - Claude 3.5 Haiku
+    # Using Claude 3.5 Haiku for optimal performance and reliability
+    model: us.anthropic.claude-3-5-haiku-20241022-v1:0
+    
+    # Legacy model support (for backward compatibility)
+    # Set legacyMode: true to use Claude 3 Haiku instead of Claude 3.5
+    legacyMode: false
+    legacyModel: anthropic.claude-3-haiku-20240307-v1:0
+    
+    # Session configuration
+    sessionTtl: 7200  # 2 hours
+
+# AWS configuration
+aws:
+  region: us-west-2  # Using us-west-2 for Bedrock connectivity
+  roleArn: "arn:aws:iam::YOUR_AWS_ACCOUNT_ID:role/KubeIntelAgentRole"
+  # Using IRSA - no static credentials needed
+  # Note: The IAM role must have permissions for Claude 3.5 models:
+  # - us.anthropic.claude-3-5-sonnet-20241022-v2:0 (primary)
+  # - us.anthropic.claude-3-5-haiku-20241022-v1:0 (fallback)
+  # - anthropic.claude-3-5-haiku-20241022-v1:0 (fallback)
+  # Use setup-irsa.sh to configure proper permissions
+  accessKeyId: ""
+  secretAccessKey: ""
+  sessionToken: ""
+
+# Configuration validation
+validation:
+  # Enable pre-deployment configuration validation
+  enabled: true
+  image:
+    repository: busybox
+    tag: "1.35"
+    pullPolicy: IfNotPresent
+
+# Migration and compatibility settings
+migration:
+  # Enable migration mode for upgrading from Claude 3 to Claude 3.5
+  enabled: false
+  
+  # Backup configuration before migration
+  createBackup: true
+  
+  # Migration strategy
+  strategy:
+    # gradual: Gradually migrate traffic to Claude 3.5
+    # immediate: Switch immediately to Claude 3.5
+    type: gradual
+    
+    # For gradual migration: percentage of traffic to route to Claude 3.5
+    claude35Percentage: 100

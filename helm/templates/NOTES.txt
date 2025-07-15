@@ -1,0 +1,107 @@
+🚀 KubeIntel has been deployed successfully!
+
+{{- if .Values.config.strands.legacyMode }}
+📋 CONFIGURATION: Legacy Mode (Claude 3 Haiku)
+   Primary Model: {{ .Values.config.strands.legacyModel | default "anthropic.claude-3-haiku-20240307-v1:0" }}
+   
+   💡 To upgrade to Claude 3.5:
+   1. Set config.strands.legacyMode: false in your values.yaml
+   2. Run: helm upgrade {{ include "kubeintel.fullname" . }} ./helm
+{{- else }}
+📋 CONFIGURATION: Claude 3.5 Enhanced Mode
+   Primary Model: {{ .Values.config.strands.model }}
+   Fallback Model: {{ .Values.config.strands.fallbackModel }}
+   Session TTL: {{ .Values.config.strands.sessionTtl }}s
+   
+   ✅ Enhanced reasoning and analysis capabilities enabled
+{{- end }}
+
+🌐 ACCESS INFORMATION:
+{{- if contains "NodePort" .Values.service.type }}
+   Get the application URL by running:
+   export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "kubeintel.fullname" . }})
+   export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+   echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+   Get the application URL by running:
+   NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+   export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "kubeintel.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+   echo http://$SERVICE_IP:{{ .Values.service.port }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+   Get the application URL by running:
+   export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "kubeintel.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+   export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+   kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+   echo "Visit http://127.0.0.1:8080 to use your application"
+{{- end }}
+
+🔍 MONITORING:
+   Check deployment status:
+   kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "kubeintel.name" . }}
+   
+   View logs:
+   kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "kubeintel.name" . }} --tail=100 -f
+   
+   Check configuration:
+   kubectl get configmap {{ include "kubeintel.fullname" . }}-config -n {{ .Release.Namespace }} -o yaml
+
+{{- $configWarnings := include "kubeintel.validateConfig" . }}
+{{- if $configWarnings }}
+
+⚠️  CONFIGURATION WARNINGS:
+   {{ $configWarnings }}
+   
+   💡 Run the validation script to get detailed recommendations:
+   python scripts/validate-claude35-config.py --helm-values helm/values.yaml
+{{- end }}
+
+🛠️  TROUBLESHOOTING:
+{{- if not .Values.config.strands.legacyMode }}
+   If you experience issues with Claude 3.5:
+   
+   1. Check model availability in your AWS region:
+      aws bedrock list-foundation-models --region {{ .Values.aws.region }}
+   
+   2. Verify IAM permissions for Claude 3.5 models:
+      - anthropic.claude-3-5-sonnet-20241022-v2:0
+      - anthropic.claude-3-5-haiku-20241022-v1:0
+   
+   3. Enable legacy mode as fallback:
+      helm upgrade {{ include "kubeintel.fullname" . }} ./helm --set config.strands.legacyMode=true
+   
+   4. Use the rollback script if needed:
+      ./scripts/rollback-claude35.sh
+{{- else }}
+   If you want to upgrade to Claude 3.5:
+   
+   1. Validate your configuration:
+      python scripts/validate-claude35-config.py
+   
+   2. Run the migration script:
+      python scripts/migrate-claude35.py --helm-values helm/values.yaml
+   
+   3. Upgrade with Claude 3.5:
+      helm upgrade {{ include "kubeintel.fullname" . }} ./helm --set config.strands.legacyMode=false
+{{- end }}
+
+📚 DOCUMENTATION:
+   - Migration Guide: scripts/README.md
+   - Configuration Validation: python scripts/validate-claude35-config.py --help
+   - Rollback Procedures: ./scripts/rollback-claude35.sh --help
+
+{{- if .Values.migration.enabled }}
+
+🔄 MIGRATION STATUS:
+   Migration mode is enabled with {{ .Values.migration.strategy.type }} strategy
+   
+   Check migration ConfigMap:
+   kubectl get configmap {{ include "kubeintel.fullname" . }}-migration -n {{ .Release.Namespace }} -o yaml
+{{- end }}
+
+🎯 NEXT STEPS:
+   1. Verify the deployment is running correctly
+   2. Test cluster analysis functionality
+   3. Monitor performance and adjust resources if needed
+   4. Set up monitoring and alerting for the deployment
+
+For more information, visit: https://github.com/your-org/kubeintel

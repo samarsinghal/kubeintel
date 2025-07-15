@@ -1,0 +1,207 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Docker
+.dockerignore
+
+# Kubernetes
+*.kubeconfig
+
+# AWS
+.aws/
+credentials
+config
+
+# Backup files
+*backup*
+*.bak
+*.orig
+
+# Session files
+/tmp/kubeintel_sessions/
+/tmp/strands/
+
+# Build artifacts
+*.tar.gz
+*.zip
+
+# Local development
+local/
+dev/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Kubernetes
+*.kubeconfig
+
+# AWS
+.aws/
+aws-credentials
+
+# Docker
+.dockerignore
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.backup
+*.bak
+
+# Local development
+.local/
+local/
+
+# Test files and debugging
+*test*.html
+test_*.py
+*_test.py
+debug_*.py
+*_debug.py
+*_debug.*
+test_*.*
+
+# Development tools and artifacts
+.kiro/
+*.benchmark
+benchmark_results_*.json
+performance_*.py
+memory_*.py
+*_benchmark.py
+PERFORMANCE_*.md
+CLEANUP_*.md
+
+# Monitoring scripts (development only)
+monitor_*.sh
+show_*.sh
+
+# Internal preparation files
+GITHUB_READY.md
+*.preparation
+*.internal
+# Temporary files
+*.tmp
+*.temp
+*_temp.py
+*_test.py
+test_*.py
+*_backup.*
+
+# Development and optimization files
+*_SUMMARY.md
+*_RESULTS.md
+*_OPTIMIZATION*.md
+*_IMPLEMENTATION*.md
+*_FIX*.md
+*_WORKING*.md
+*_CLEANUP*.md
+dashboard-access-info.txt
+failing-deployment-demo-summary.md
+test-*.yaml
+test_*.py
+
+# Additional backup and temporary patterns
+*.backup
+*.save
+*copy*
+*old*
+*_backup
+*_old
+*_copy
+*_save
+*_temp
+*.orig
+*.rej
+
+# Editor backup files
+*~
+.#*
+#*#
+
+# System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Archive files
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.rar
+*.7z
+
+# Tests (not needed for end users)
+tests/
+*.pytest_cache/
+__pycache__/

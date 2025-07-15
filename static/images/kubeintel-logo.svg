@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <g id="kubeintel-logo">
+    <g id="hexagon-shape" transform="translate(56, 56) scale(0.78)">
+      <!-- Hexagon path -->
+      <path d="M256 0L480 128L480 384L256 512L32 384L32 128L256 0Z" fill="#007bff"/>
+      <!-- Inner hexagon (transparent) -->
+      <path d="M256 100L400 185L400 355L256 440L112 355L112 185L256 100Z" fill="transparent"/>
+      
+      <!-- 'i' shape instead of vertical line -->
+      <!-- Dot of the 'i' -->
+      <circle cx="256" cy="140" r="25" fill="#FFFFFF"/>
+      <!-- Stem of the 'i' -->
+      <path d="M256 180L256 440" stroke="#FFFFFF" stroke-width="40" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>
