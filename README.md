@@ -4,29 +4,26 @@
 
 ## Overview
 
-KubeIntel is an AI-powered Kubernetes analysis platform that uses AWS Bedrock's Claude model to provide intelligent insights about your clusters. Through its FastAPI backend and AWS Strands framework integration, it offers:
+KubeIntel is an AI-powered Kubernetes analysis platform that uses AWS Bedrock model to provide intelligent insights about your clusters. Through its FastAPI backend and AWS Strands framework integration, it offers:
 
 - Real-time cluster analysis with AI-powered insights
 - Continuous health monitoring and status checks
 - Predictive analytics for potential issues
 - Resource utilization and optimization recommendations
-- Security posture assessment
 - Natural language querying of cluster state
 
 ### Key Features
 
-- **AI Analysis**: Uses AWS Bedrock (Claude) to analyze cluster state and provide insights
+- **AI Analysis**: Uses AWS Bedrock to analyze cluster state and provide insights
 - **Event Loop System**: Continuous monitoring with predictive analytics
 - **Multiple Analysis Modes**:
   - Real-time analysis via REST API
-  - Streaming updates via WebSocket/SSE
   - Predictive analytics through event loop
 - **Comprehensive Tools**:
   - Pod health analysis
   - Service monitoring
   - Event tracking
   - Resource optimization
-  - Security scanning
   - Performance analysis
 
 ## Prerequisites
