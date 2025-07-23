@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubeintel.fullname" . }}-config
+  labels:
+    {{- include "kubeintel.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    # AWS Strands Monitoring Agent Configuration
+    log_level: {{ .Values.config.logLevel }}
+    log_format: {{ .Values.config.logFormat }}
+    
+    # Kubernetes configuration
+    kubernetes_config: {{ .Values.config.kubernetesConfig }}
+    max_events: {{ .Values.config.maxEvents }}
+    max_log_lines: {{ .Values.config.maxLogLines }}
+    analysis_timeout: {{ .Values.config.analysisTimeout }}
+    
+    # HTTP server
+    host: {{ .Values.config.host }}
+    port: {{ .Values.config.port }}
+    
+    # AWS Strands
+    strands_region: {{ .Values.config.strands.region }}
+    strands_model: {{ .Values.config.strands.model }}
+    strands_session_ttl: {{ .Values.config.strands.sessionTtl }}
+    {{- if .Values.config.strands.endpoint }}
+    strands_endpoint: {{ .Values.config.strands.endpoint }}
+    {{- end }}
+    # Streaming fix configuration
+    strands_disable_streaming: {{ .Values.config.strands.disableStreaming | default true }}
+    strands_fallback_model: {{ .Values.config.strands.fallbackModel | default "anthropic.claude-3-haiku-20240307-v1:0" }}
+    
+    # Direct Kubernetes API access
+    direct_kubernetes_access: {{ .Values.config.directKubernetesAccess | default true }}
+    
+    # Auto-monitoring configuration
+    auto_monitoring:
+      enabled: {{ .Values.config.autoMonitoring.enabled }}
+      event_batch_size: {{ .Values.config.autoMonitoring.eventBatchSize }}
+      event_batch_timeout: {{ .Values.config.autoMonitoring.eventBatchTimeout }}
+      monitored_namespaces: {{ .Values.config.autoMonitoring.monitoredNamespaces | quote }}
+      critical_event_types: {{ .Values.config.autoMonitoring.criticalEventTypes | quote }}
+      analysis_retention_days: {{ .Values.config.autoMonitoring.analysisRetentionDays }}
+      max_concurrent_analyses: {{ .Values.config.autoMonitoring.maxConcurrentAnalyses }}
+      deduplication_window: {{ .Values.config.autoMonitoring.deduplicationWindow }}

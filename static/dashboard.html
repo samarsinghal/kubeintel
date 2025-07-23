@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KubeIntel - Strands Observability Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            padding-top: 20px;
+        }
+        .dashboard-header {
+            background-color: #343a40;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .metric-card {
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: transform 0.3s;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .metric-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .status-healthy {
+            color: #198754;
+        }
+        .status-warning {
+            color: #ffc107;
+        }
+        .status-critical {
+            color: #dc3545;
+        }
+        .tool-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .refresh-btn {
+            margin-bottom: 20px;
+        }
+        .last-updated {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-header">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1>KubeIntel Strands Observability</h1>
+                    <p class="mb-0">Monitor AWS Strands integration performance and health</p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button id="refreshBtn" class="btn btn-light">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh Data
+                    </button>
+                    <div class="last-updated" id="lastUpdated"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Health Overview -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <h5>System Status</h5>
+                    <div id="systemStatus" class="metric-value status-healthy">Healthy</div>
+                    <div class="metric-label">Current system health</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <h5>Total Tool Executions</h5>
+                    <div id="totalExecutions" class="metric-value">0</div>
+                    <div class="metric-label">Across all tools</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <h5>Success Rate</h5>
+                    <div id="successRate" class="metric-value">0%</div>
+                    <div class="metric-label">Overall tool success rate</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <h5>Avg Response Time</h5>
+                    <div id="avgResponseTime" class="metric-value">0ms</div>
+                    <div class="metric-label">Average tool execution time</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <h5>Tool Usage</h5>
+                    <div class="chart-container">
+                        <canvas id="toolUsageChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <h5>Error Rates</h5>
+                    <div class="chart-container">
+                        <canvas id="errorRateChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tool Details -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <h5>Top Tools by Usage</h5>
+                    <div class="tool-list" id="topToolsList">
+                        <div class="alert alert-info">Loading data...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <h5>Recent Errors</h5>
+                    <div class="tool-list" id="recentErrorsList">
+                        <div class="alert alert-info">Loading data...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Response Time Trends -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="metric-card">
+                    <h5>Response Time Trends</h5>
+                    <div class="chart-container">
+                        <canvas id="responseTimeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chart objects
+        let toolUsageChart = null;
+        let errorRateChart = null;
+        let responseTimeChart = null;
+
+        // Fetch dashboard data
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch('/api/observability/dashboard');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                updateDashboard(data);
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+                document.getElementById('systemStatus').textContent = 'Error';
+                document.getElementById('systemStatus').className = 'metric-value status-critical';
+            }
+        }
+
+        // Update dashboard with fetched data
+        function updateDashboard(data) {
+            // Update system status
+            const systemStatus = document.getElementById('systemStatus');
+            systemStatus.textContent = capitalizeFirstLetter(data.summary.status || 'Unknown');
+            systemStatus.className = `metric-value status-${data.summary.status || 'warning'}`;
+
+            // Update metrics
+            document.getElementById('totalExecutions').textContent = data.summary.total_tool_executions || 0;
+            document.getElementById('successRate').textContent = `${Math.round((data.summary.overall_success_rate || 0) * 100)}%`;
+            document.getElementById('avgResponseTime').textContent = `${(data.summary.overall_avg_response_time || 0).toFixed(3)}s`;
+
+            // Update last updated time
+            document.getElementById('lastUpdated').textContent = `Last updated: ${new Date(data.timestamp).toLocaleString()}`;
+
+            // Update charts
+            updateToolUsageChart(data.top_tools_by_usage);
+            updateErrorRateChart(data.top_tools_by_error_rate);
+            updateResponseTimeChart(data.response_time_trends);
+
+            // Update tool lists
+            updateTopToolsList(data.top_tools_by_usage);
+            updateRecentErrorsList(data.error_summary);
+        }
+
+        // Update tool usage chart
+        function updateToolUsageChart(toolUsage) {
+            const ctx = document.getElementById('toolUsageChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (toolUsageChart) {
+                toolUsageChart.destroy();
+            }
+            
+            const labels = Object.keys(toolUsage);
+            const values = Object.values(toolUsage);
+            
+            toolUsageChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Executions',
+                        data: values,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update error rate chart
+        function updateErrorRateChart(errorRates) {
+            const ctx = document.getElementById('errorRateChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (errorRateChart) {
+                errorRateChart.destroy();
+            }
+            
+            const labels = Object.keys(errorRates);
+            const values = Object.values(errorRates).map(rate => rate * 100); // Convert to percentage
+            
+            errorRateChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Error Rate (%)',
+                        data: values,
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update response time chart
+        function updateResponseTimeChart(responseTimeTrends) {
+            const ctx = document.getElementById('responseTimeChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (responseTimeChart) {
+                responseTimeChart.destroy();
+            }
+            
+            const datasets = [];
+            const colors = [
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 99, 132, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)'
+            ];
+            
+            let colorIndex = 0;
+            for (const [tool, avgTime] of Object.entries(responseTimeTrends)) {
+                datasets.push({
+                    label: tool,
+                    data: [avgTime],
+                    backgroundColor: colors[colorIndex % colors.length],
+                    borderColor: colors[colorIndex % colors.length],
+                    borderWidth: 1
+                });
+                colorIndex++;
+            }
+            
+            responseTimeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Average Response Time (s)'],
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update top tools list
+        function updateTopToolsList(toolUsage) {
+            const topToolsList = document.getElementById('topToolsList');
+            
+            if (Object.keys(toolUsage).length === 0) {
+                topToolsList.innerHTML = '<div class="alert alert-info">No tool usage data available</div>';
+                return;
+            }
+            
+            let html = '<ul class="list-group">';
+            for (const [tool, count] of Object.entries(toolUsage)) {
+                html += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${tool}
+                        <span class="badge bg-primary rounded-pill">${count}</span>
+                    </li>
+                `;
+            }
+            html += '</ul>';
+            
+            topToolsList.innerHTML = html;
+        }
+
+        // Update recent errors list
+        function updateRecentErrorsList(errorSummary) {
+            const recentErrorsList = document.getElementById('recentErrorsList');
+            
+            if (errorSummary.total_errors === 0) {
+                recentErrorsList.innerHTML = '<div class="alert alert-success">No errors reported</div>';
+                return;
+            }
+            
+            let html = '<div class="mb-3">Total Errors: <strong>' + errorSummary.total_errors + '</strong></div>';
+            
+            // Error types breakdown
+            html += '<h6>Error Types:</h6>';
+            html += '<ul class="list-group mb-3">';
+            for (const [errorType, count] of Object.entries(errorSummary.error_types)) {
+                html += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${errorType}
+                        <span class="badge bg-danger rounded-pill">${count}</span>
+                    </li>
+                `;
+            }
+            html += '</ul>';
+            
+            // Tools with errors
+            html += '<h6>Tools with Errors:</h6>';
+            html += '<ul class="list-group">';
+            for (const [tool, count] of Object.entries(errorSummary.tools_with_errors)) {
+                html += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${tool}
+                        <span class="badge bg-warning rounded-pill">${count}</span>
+                    </li>
+                `;
+            }
+            html += '</ul>';
+            
+            recentErrorsList.innerHTML = html;
+        }
+
+        // Helper function to capitalize first letter
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchDashboardData();
+            
+            // Set up refresh button
+            document.getElementById('refreshBtn').addEventListener('click', fetchDashboardData);
+            
+            // Auto-refresh every 30 seconds
+            setInterval(fetchDashboardData, 30000);
+        });
+    </script>
+</body>
+</html>

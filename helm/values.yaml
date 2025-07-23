@@ -1,0 +1,133 @@
+# Default values for kubeintel
+replicaCount: 1
+
+image:
+  repository: YOUR_AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/kubeintel
+  pullPolicy: Always
+  tag: "v1.2.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: 
+    eks.amazonaws.com/role-arn: "arn:aws:iam::YOUR_AWS_ACCOUNT_ID:role/KubeIntelAgentRole"
+  name: "kubeintel-agent"
+
+podAnnotations: {}
+
+# RBAC configuration
+rbac:
+  create: true
+
+# Network Policy configuration
+networkPolicy:
+  enabled: false
+
+# Probes configuration
+probes:
+  liveness:
+    enabled: true
+    path: /health
+    port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readiness:
+    enabled: true
+    path: /health
+    port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8080
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Application configuration
+config:
+  # Auto monitoring configuration
+  autoMonitoring:
+    enabled: true
+  logLevel: INFO
+  logFormat: json
+  kubernetesConfig: in-cluster
+  maxEvents: 100
+  maxLogLines: 100
+  analysisTimeout: 180
+  host: 0.0.0.0
+  port: 8080
+  
+  # AWS Strands configuration
+  strands:
+    region: us-west-2  # Using us-west-2 for better Bedrock connectivity
+    model: anthropic.claude-3-haiku-20240307-v1:0
+    sessionTtl: 3600
+    endpoint: ""
+    # Streaming fix configuration
+    disableStreaming: true
+    # VPC endpoint configuration (not needed with us-west-2)
+    useVpcEndpoints: false
+    connectTimeout: 30
+    readTimeout: 60
+    fallbackModel: anthropic.claude-3-haiku-20240307-v1:0
+
+# AWS configuration
+aws:
+  region: us-west-2  # Using us-west-2 for Bedrock connectivity
+  roleArn: "arn:aws:iam::YOUR_AWS_ACCOUNT_ID:role/KubeIntelAgentRole"
+  # Using IRSA - no static credentials needed
+  accessKeyId: ""
+  secretAccessKey: ""
+  sessionToken: ""

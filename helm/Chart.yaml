@@ -1,0 +1,24 @@
+apiVersion: v2
+name: kubeintel
+description: KubeIntel - AI-powered Kubernetes intelligence and predictive analytics platform with AWS Strands 1.0.1
+type: application
+version: 1.2.0
+appVersion: "v1.2.0-strands1.0.1"
+home: https://github.com/your-org/kubeintel
+sources:
+  - https://github.com/your-org/kubeintel
+maintainers:
+  - name: AWS Strands Team
+    email: strands-team@amazon.com
+keywords:
+  - kubernetes
+  - monitoring
+  - ai
+  - aws
+  - bedrock
+  - strands
+  - strands-1.0.1
+annotations:
+  category: Monitoring
+  strands.version: "1.0.1"
+dependencies: []

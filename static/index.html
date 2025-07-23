@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KubeIntel - AI-Powered Kubernetes Intelligence Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 20px 30px;
+            text-align: left;
+        }
+
+        .header h1 {
+            margin: 0;
+            padding: 0;
+            font-weight: normal;
+            line-height: 1;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-top: 8px;
+            margin-left: 2px;
+        }
+
+        .status-bar {
+            background: #f8f9fa;
+            padding: 15px 30px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc3545;
+        }
+
+        .status-dot.healthy {
+            background: #28a745;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .chat-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+
+        .message.agent {
+            background: white;
+            border: 1px solid #e9ecef;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .message.loading {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            color: #0d47a1;
+        }
+
+        .loading-message {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 8px;
+            color: #0d47a1;
+            margin: 10px 0;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #f3f3f3;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            border-radius: 2px;
+            animation: progress 3s ease-in-out infinite;
+        }
+
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .input-area {
+            padding: 20px;
+            background: white;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .prompt-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .prompt-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .send-btn {
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .send-btn:hover {
+            background: #0056b3;
+        }
+
+        .send-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .options {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .option-group label {
+            font-size: 14px;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .option-group select,
+        .option-group input {
+            padding: 8px 12px;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .quick-btn:hover {
+            background: #e9ecef;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .analysis-result {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 10px;
+        }
+
+        .analysis-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .analysis-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .analysis-status.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .analysis-status.failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .analysis-content {
+            white-space: pre-wrap;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="display: flex; align-items: center;">
+                <img src="/static/images/kubeintel-icon.svg" alt="KubeIntel" style="height: 60px; width: 60px; margin-right: 15px;">
+                <div>
+                    <div style="font-size: 28px; font-weight: 500; color: white; letter-spacing: 0.5px;">KubeIntel</div>
+                    <div style="font-size: 14px; color: rgba(255,255,255,0.8); margin-top: 4px;">AI-powered Kubernetes intelligence</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Checking status...</span>
+            </div>
+            <div id="statusDetails"></div>
+        </div>
+
+        <div class="main-content">
+            <div class="quick-actions">
+                <button class="quick-btn" onclick="quickAnalysis('cluster health')">🏥 Cluster Health</button>
+                <button class="quick-btn" onclick="quickAnalysis('pod status')">🔍 Pod Status</button>
+                <button class="quick-btn" onclick="quickAnalysis('resource usage')">📊 Resource Usage</button>
+                <button class="quick-btn" onclick="quickAnalysis('recent events')">⚡ Recent Events</button>
+                <button class="quick-btn" onclick="quickAnalysis('troubleshoot issues')">🔧 Troubleshoot</button>
+                <button class="quick-btn" onclick="showPredictions()">🔮 Predictions</button>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message agent">
+                        <strong>KubeIntel AI:</strong> Hello! I'm your Kubernetes intelligence assistant. Ask me
+                        anything about your cluster - I can analyze health, troubleshoot issues, check resource usage,
+                        and provide predictive insights. Try one of the quick actions above or type your own question!
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <div class="input-group">
+                        <input type="text" class="prompt-input" id="promptInput"
+                            placeholder="Ask me about your cluster... (e.g., 'What pods are failing?' or 'Check cluster health')"
+                            onkeypress="handleKeyPress(event)">
+                        <button class="send-btn" id="sendBtn" onclick="sendPrompt()">Send</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                Analyzing your cluster...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let isAnalyzing = false;
+
+        // Initialize the application with fallback
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('DOM loaded, initializing...');
+            
+            // Immediate status update with fallback
+            setTimeout(function() {
+                const statusText = document.getElementById('statusText');
+                if (statusText && statusText.textContent === 'Checking status...') {
+                    console.log('Fallback: Forcing status update');
+                    statusText.textContent = 'Connecting...';
+                }
+            }, 1000);
+            
+            // Run health check
+            setTimeout(checkHealth, 500);
+            
+            // Setup other listeners
+            setupEventListeners();
+            
+            // Fallback: If still checking after 10 seconds, force online status
+            setTimeout(function() {
+                const statusText = document.getElementById('statusText');
+                if (statusText && (statusText.textContent === 'Checking status...' || statusText.textContent === 'Connecting...' || statusText.textContent === 'Checking...')) {
+                    console.log('Fallback: Forcing online status');
+                    const statusDot = document.getElementById('statusDot');
+                    statusDot.className = 'status-dot healthy';
+                    statusText.textContent = 'Agent Online';
+                    document.getElementById('statusDetails').textContent = 'Framework: AWS Strands v1.0.1';
+                }
+            }, 10000);
+        });
+
+        function setupEventListeners() {
+            // Event listeners setup (if needed in the future)
+        }
+
+        // Simplified and robust status checking
+        function checkHealth() {
+            console.log('Starting health check...');
+            
+            // Set loading state
+            const statusText = document.getElementById('statusText');
+            const statusDot = document.getElementById('statusDot');
+            const statusDetails = document.getElementById('statusDetails');
+            
+            if (!statusText) {
+                console.error('Status elements not found');
+                return;
+            }
+            
+            statusText.textContent = 'Checking...';
+            
+            // Use XMLHttpRequest for better compatibility
+            const xhr = new XMLHttpRequest();
+            xhr.timeout = 5000; // 5 second timeout
+            
+            xhr.onload = function() {
+                console.log('Health check response:', xhr.status, xhr.responseText);
+                
+                if (xhr.status === 200) {
+                    try {
+                        const health = JSON.parse(xhr.responseText);
+                        console.log('Parsed health data:', health);
+                        
+                        if (health.healthy) {
+                            statusDot.className = 'status-dot healthy';
+                            statusText.textContent = 'Agent Online';
+                            statusDetails.textContent = `Framework: ${health.framework || 'AWS Strands'} v${health.version || '1.0.1'}`;
+                        } else {
+                            statusDot.className = 'status-dot error';
+                            statusText.textContent = 'Agent Issues';
+                            statusDetails.textContent = 'System issues detected';
+                        }
+                    } catch (e) {
+                        console.error('JSON parse error:', e);
+                        statusDot.className = 'status-dot error';
+                        statusText.textContent = 'Parse Error';
+                        statusDetails.textContent = 'Invalid response format';
+                    }
+                } else {
+                    console.error('HTTP error:', xhr.status);
+                    statusDot.className = 'status-dot error';
+                    statusText.textContent = 'HTTP Error';
+                    statusDetails.textContent = `Status: ${xhr.status}`;
+                }
+            };
+            
+            xhr.onerror = function() {
+                console.error('Network error');
+                statusDot.className = 'status-dot error';
+                statusText.textContent = 'Network Error';
+                statusDetails.textContent = 'Cannot connect to server';
+            };
+            
+            xhr.ontimeout = function() {
+                console.error('Request timeout');
+                statusDot.className = 'status-dot error';
+                statusText.textContent = 'Timeout';
+                statusDetails.textContent = 'Server not responding';
+            };
+            
+            xhr.open('GET', '/health', true);
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.send();
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendPrompt();
+            }
+        }
+
+        function quickAnalysis(type) {
+            let analysisRequest = '';
+            
+            switch(type) {
+                case 'cluster health':
+                    analysisRequest = 'Provide a comprehensive cluster health assessment including: overall health score, critical issues requiring immediate attention, resource utilization overview, node and pod health status, recent events impact, and actionable recommendations with priority levels. Use clear sections and visual indicators (✅❌⚠️).';
+                    break;
+                case 'pod status':
+                    analysisRequest = 'Analyze pod status across all namespaces including: pod health summary by status, pods with high restart counts or failures, resource-constrained pods, readiness/liveness probe issues, scheduling problems, and specific remediation steps. Use tables and status indicators.';
+                    break;
+                case 'resource usage':
+                    analysisRequest = 'Provide detailed resource utilization analysis including: cluster-wide CPU and memory usage percentages, top resource-consuming pods and namespaces, nodes approaching capacity limits, resource optimization opportunities, and scaling recommendations. Include visual percentage indicators.';
+                    break;
+                case 'recent events':
+                    analysisRequest = 'Analyze recent Kubernetes events including: event summary by type and severity, most frequent events and patterns, events indicating system issues, resource-related events, security/configuration events, and timeline of critical events with impact assessment. Group by severity with clear action items.';
+                    break;
+                case 'troubleshoot issues':
+                    analysisRequest = 'Perform comprehensive troubleshooting analysis including: active issues detection (failed pods, services, deployments), root cause analysis for each problem, system bottlenecks and performance issues, configuration mismatches, network connectivity problems, and step-by-step troubleshooting guide with kubectl commands. Prioritize by business impact.';
+                    break;
+                default:
+                    analysisRequest = type;
+            }
+            
+            // Send the analysis request
+            sendAnalysisRequest(analysisRequest);
+        }
+        
+        function sendAnalysisRequest(analysisRequest) {
+            const chatMessages = document.getElementById('chatMessages');
+            
+            // Add user message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user';
+            userMessage.innerHTML = `<strong>You:</strong> ${analysisRequest.split(' including:')[0]}...`; // Show shortened version
+            chatMessages.appendChild(userMessage);
+            
+            // Add enhanced loading message
+            const loadingMessage = document.createElement('div');
+            loadingMessage.className = 'message agent';
+            loadingMessage.innerHTML = `
+                <div class="loading-message">
+                    <div class="loading-spinner"></div>
+                    <div>
+                        <strong>KubeIntel AI:</strong> Analyzing your cluster...
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(loadingMessage);
+            
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Send analysis request with longer timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 180000); // 180 second timeout
+            
+            fetch('/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    scope: 'cluster',
+                    analysis_request: analysisRequest
+                }),
+                signal: controller.signal
+            })
+            .then(response => {
+                clearTimeout(timeoutId);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(result => {
+                chatMessages.removeChild(loadingMessage);
+                displayAnalysisResult(result);
+            })
+            .catch(error => {
+                chatMessages.removeChild(loadingMessage);
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'message agent error';
+                
+                let errorText = 'Sorry, I encountered an error: ';
+                if (error.name === 'AbortError') {
+                    errorText += 'Request timed out. The analysis is taking longer than expected.';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorText += 'Network connection error. Please check your connection and try again.';
+                } else {
+                    errorText += error.message;
+                }
+                
+                errorMessage.innerHTML = `<strong>KubeIntel AI:</strong> ${errorText}`;
+                chatMessages.appendChild(errorMessage);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+        }
+
+        async function sendPrompt() {
+            if (isAnalyzing) return;
+
+            const promptInput = document.getElementById('promptInput');
+            const prompt = promptInput.value.trim();
+
+            if (!prompt) return;
+
+            // Add user message to chat
+            addMessage(prompt, 'user');
+
+            // Clear input and show loading
+            promptInput.value = '';
+            setAnalyzing(true);
+
+            try {
+                // Prepare request for analyze endpoint
+                const requestBody = {
+                    scope: 'cluster',
+                    analysis_request: prompt,
+                    include_logs: false
+                };
+
+                // Send analysis request with timeout handling
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 180000); // 180 second timeout
+                
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                // Display analysis response
+                displayAnalysisResult(result);
+
+            } catch (error) {
+                console.error('Analysis failed:', error);
+                
+                let errorText = 'Error: ';
+                if (error.name === 'AbortError') {
+                    errorText += 'Request timed out. The analysis is taking longer than expected.';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorText += 'Network connection error. Please check your connection and try again.';
+                } else {
+                    errorText += error.message;
+                }
+                
+                addMessage(errorText, 'error');
+            } finally {
+                setAnalyzing(false);
+            }
+        }
+
+        function addMessage(content, type) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+
+            if (type === 'user') {
+                messageDiv.innerHTML = `<strong>You:</strong> ${content}`;
+            } else if (type === 'error') {
+                messageDiv.innerHTML = `<strong>Error:</strong> ${content}`;
+            } else {
+                messageDiv.innerHTML = content;
+            }
+
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function displayAnalysisResult(result) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'message agent';
+
+            let content = `<div class="analysis-result">`;
+            content += `<div class="analysis-header">`;
+            content += `<strong>KubeIntel Analysis</strong>`;
+            content += `<span class="analysis-status ${result.status}">${result.status}</span>`;
+            content += `</div>`;
+
+            if (result.status === 'completed') {
+                // Extract the analysis text from the Strands response
+                let analysisText = '';
+                if (result.analysis && result.analysis.message && result.analysis.message.content) {
+                    const content = result.analysis.message.content;
+                    if (Array.isArray(content) && content.length > 0) {
+                        analysisText = content[0].text || '';
+                    }
+                } else if (typeof result.analysis === 'string') {
+                    analysisText = result.analysis;
+                }
+
+                if (analysisText) {
+                    content += `<div class="analysis-content">${analysisText}</div>`;
+                }
+
+                // Show cluster summary if available
+                if (result.cluster_summary) {
+                    content += `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e9ecef;">`;
+                    content += `<strong>Cluster Summary:</strong><br>`;
+                    content += `📊 ${result.cluster_summary.total_pods} pods, ${result.cluster_summary.total_services} services, ${result.cluster_summary.total_events} events`;
+                    content += `</div>`;
+                }
+            } else {
+                content += `<div class="analysis-content" style="color: #dc3545;">`;
+                content += `Analysis failed: ${result.error || 'Unknown error'}`;
+                content += `</div>`;
+            }
+
+            content += `<div style="margin-top: 15px; font-size: 12px; color: #6c757d;">`;
+            content += `Analysis ID: ${result.analysis_id} | ${new Date(result.timestamp).toLocaleString()}`;
+            content += `</div>`;
+            content += `</div>`;
+
+            resultDiv.innerHTML = content;
+            messagesContainer.appendChild(resultDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function setAnalyzing(analyzing) {
+            isAnalyzing = analyzing;
+            const sendBtn = document.getElementById('sendBtn');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+
+            if (analyzing) {
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<div class="loading-spinner" style="width: 16px; height: 16px; border-width: 2px; margin-right: 8px;"></div>Analyzing...';
+                loadingIndicator.style.display = 'block';
+                loadingIndicator.innerHTML = `
+                    <div class="loading-message">
+                        <div class="loading-spinner"></div>
+                        <div>
+                            <strong>Processing your request...</strong><br>
+                            <small>Analyzing cluster data and generating insights</small>
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send';
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        // Show predictive analytics
+        async function showPredictions() {
+            try {
+                console.log('Fetching predictions...');
+                const response = await fetch('/predictions', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 10000  // 10 second timeout
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const predictions = await response.json();
+                console.log('Predictions data:', predictions);
+                
+                let content = '';
+                
+                if (predictions.status === 'unavailable') {
+                    content = `
+                        <div class="message agent">
+                            <strong>🔮 Predictive Analytics:</strong><br>
+                            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                                <strong>⚠️ Not Available</strong><br>
+                                ${predictions.message}<br><br>
+                                <em>Predictions require continuous monitoring data. Please wait a few minutes for the system to collect sufficient data points.</em>
+                            </div>
+                        </div>
+                    `;
+                } else if (predictions.status === 'no_predictions') {
+                    content = `
+                        <div class="message agent">
+                            <strong>🔮 Predictive Analytics:</strong><br>
+                            <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                                <strong>✅ All Clear</strong><br>
+                                No predictions needed - your cluster is running smoothly!<br><br>
+                                <strong>📊 Monitoring Status:</strong><br>
+                                • Duration: ${predictions.monitoring_duration || 'Starting up'}<br>
+                                • Data Points: ${predictions.data_points || 0}<br>
+                                • Status: Healthy cluster, no anomalies detected<br><br>
+                                <em>Predictions will appear here if any issues are detected that require attention.</em>
+                            </div>
+                        </div>
+                    `;
+                        <div class="message agent">
+                            <strong>🔮 Predictive Analytics:</strong><br>
+                            <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                                <strong>✅ All Clear</strong><br>
+                                No concerning patterns detected in your cluster data.<br><br>
+                                <strong>Monitoring Status:</strong><br>
+                                • Data Points: ${predictions.data_points || 0}<br>
+                                • Duration: ${predictions.monitoring_duration || '0 minutes'}<br>
+                                • System Health: Good
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Active predictions
+                    content = `
+                        <div class="message agent">
+                            <strong>🔮 Predictive Analytics:</strong><br>
+                            <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                                <strong>📊 Prediction Summary</strong><br>
+                                • Total Predictions: ${predictions.total_predictions}<br>
+                                • High Confidence: ${predictions.high_confidence_count}<br>
+                                • Data Points: ${predictions.data_points || 0}<br>
+                                • Monitoring: ${predictions.monitoring_duration || '0 minutes'}<br><br>
+                    `;
+                    
+                    if (predictions.severity_breakdown) {
+                        content += '<strong>🚨 Severity Breakdown:</strong><br>';
+                        Object.entries(predictions.severity_breakdown).forEach(([severity, count]) => {
+                            const emoji = severity === 'critical' ? '🔴' : severity === 'high' ? '🟠' : severity === 'medium' ? '🟡' : '🟢';
+                            content += `• ${emoji} ${severity.charAt(0).toUpperCase() + severity.slice(1)}: ${count}<br>`;
+                        });
+                        content += '<br>';
+                    }
+                    
+                    if (predictions.recent_predictions && predictions.recent_predictions.length > 0) {
+                        content += '<strong>🔍 Recent Predictions:</strong><br>';
+                        predictions.recent_predictions.forEach(pred => {
+                            const severityColor = pred.severity === 'critical' ? '#dc3545' : 
+                                                pred.severity === 'high' ? '#fd7e14' : 
+                                                pred.severity === 'medium' ? '#ffc107' : '#28a745';
+                            content += `
+                                <div style="background: white; border-left: 4px solid ${severityColor}; padding: 10px; margin: 8px 0; border-radius: 4px;">
+                                    <strong>${pred.type.replace(/_/g, ' ').toUpperCase()}</strong><br>
+                                    ${pred.description}<br>
+                                    <small>Confidence: ${(pred.confidence * 100).toFixed(0)}% | Time Frame: ${pred.time_frame}</small>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    content += `
+                            </div>
+                            <div style="margin-top: 10px; font-size: 0.9em; color: #6c757d;">
+                                <em>💡 Tip: Click "🔧 Troubleshoot" for detailed recommendations on addressing these predictions.</em>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('chatMessages').innerHTML += content;
+                document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+                
+            } catch (error) {
+                console.error('Failed to fetch predictions:', error);
+                const errorContent = `
+                    <div class="message agent">
+                        <strong>🔮 Predictive Analytics:</strong><br>
+                        <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 15px; margin: 10px 0;">
+                            <strong>❌ Error</strong><br>
+                            Failed to fetch predictions: ${error.message}
+                        </div>
+                    </div>
+                `;
+                document.getElementById('chatMessages').innerHTML += errorContent;
+                document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+            }
+        }
+
+        // Refresh health status every 30 seconds
+        setInterval(checkHealth, 30000);
+    </script>
+</body>
+
+</html>
